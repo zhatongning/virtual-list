@@ -18,12 +18,18 @@ const generateHexColor = function() {
 export function generateData(totalCount, dynamicHeight) {
   const dataSource = []
   for (let i = 0; i < totalCount; i++) {
-    dataSource.push({
-      title: `title ${i}`,
+    const $p = {
       idx: i,
+      backgroundColor: generateHexColor(),
+      title: `title ${i}`,
       height: dynamicHeight ? HeightRange[randomInt(5)] : FixedHeight,
-      backgroundColor: generateHexColor()
-    })
+    }
+    
+    if (dynamicHeight === false) {
+      delete $p.height
+      $p.title = `title ${i}`.repeat(randomInt(20) + 1)
+    }
+    dataSource.push($p)
   }
   return dataSource
 }
