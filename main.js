@@ -38,5 +38,7 @@ document.querySelector('.selectors').addEventListener('click', (e) => {
 function showConfig(val) {
   if (val === '05virtual-list-extended') {
     document.querySelector('.config').style.display = 'flex'
+  } else {
+    document.querySelector('.config').style.display = 'none'
   }
 }
