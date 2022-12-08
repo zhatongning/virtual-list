@@ -19,6 +19,13 @@
       overflow: auto;
       /* position: relative; */
     }
+    .config {
+      margin-top: 15px;
+      display: none;      
+    }
+    .config span {
+      display: flex;
+    }
   </style>
 </head>
 <body>
@@ -35,6 +42,17 @@
     <label>
       <input type="radio" name="wayToWork" value="04virtual-list-height-get-from-dom" /> 虚拟列表-高度由内容撑开
     </label>
+    <label>
+      <input type="radio" name="wayToWork" value="05virtual-list-extended" /> 虚拟列表-能力扩展
+    </label>
+    <div class="config">
+      <span>
+        offset: <input type="text" id="offset-top" placeholder="offset-top">
+      </span>
+      <span style="margin-left: 30px">
+        overscan: <input type="text" id="overscan" placeholder="overscan">
+      </span>
+    </div>
   </div>
 
   <div class="box"></div>

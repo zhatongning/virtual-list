@@ -14,6 +14,7 @@ document.querySelector('.selectors').addEventListener('click', (e) => {
       lastEvenListener()
     }
     window.localStorage.setItem(CacheChioceStorageKey, target.value)
+    showConfig(target.value)
     import(getTargetPath(target.value)).then(function({ removeAllListeners }) {
       lastEvenListener = removeAllListeners
     })
@@ -23,7 +24,8 @@ document.querySelector('.selectors').addEventListener('click', (e) => {
 
 ;(function initFromCache() {
   const cache = window.localStorage.getItem(CacheChioceStorageKey)
-  if (cache) {
+  if (cache) {   
+    showConfig(cache)
     import(getTargetPath(cache))
     Array.prototype.forEach.call(document.querySelectorAll('input[type=radio]'), function(el) {
       if (el.value === cache) {
@@ -33,3 +35,8 @@ document.querySelector('.selectors').addEventListener('click', (e) => {
   }
 })()
 
+function showConfig(val) {
+  if (val === '05virtual-list-extended') {
+    document.querySelector('.config').style.display = 'flex'
+  }
+}

@@ -1,24 +1,48 @@
-import { generateData, FixedHeight as EslimateHeight, removeAllChildren } from './utils.js'
+import { generateData, FixedHeight as EslimateHeight, removeAllChildren, randomInt } from './utils.js'
 
 removeAllChildren(boxEl)
-boxEl.scrollTop = 0
+
+boxEl.scrollTop = document.querySelector('#offset-top').value
+
+document.querySelector('#offset-top').addEventListener('input', function(e) {
+  boxEl.scrollTop = e.target.value
+})
+
+// 
+let overscan = 10
+document.querySelector('#overscan').addEventListener('input', function(e) {
+  overscan = e.target.value
+})
 
 
 const boxHeight = boxEl.clientHeight
 const totalCount = 500
 const dataSource = generateData(totalCount, false)
-const eslimateHeight = 30
+const eslimateHeight = randomInt(31, 30)
+console.log('当前随机的 eslimateHeight:', eslimateHeight)
 
 const container = document.createElement('div')
 container.className = 'container'
 container.style.width = '500px'
 container.style.position = 'relative'
-const eslimateTotalHeight =  eslimateHeight * totalCount
+let eslimateTotalHeight =  eslimateHeight * totalCount
 container.style.height = `${ eslimateTotalHeight }px`
 boxEl.appendChild(container)
 
 const itemSizeCache = window.itemSizeCache = new Map()
 let lastMeasureIndex = -1
+
+/**
+ * @func getNextTop 获取index的下一个item的top值
+ * @param index {number} 索引值
+ */ 
+function getNextTop(index) {
+  if (!itemSizeCache.has(index)) {
+    return 0
+  }
+  let cache = itemSizeCache.get(index)
+  return cache.top + cache.height
+}
 
 function calcStartIndex(offsetTop) {   
   if (itemSizeCache.size === 0) {
@@ -32,19 +56,18 @@ function calcStartIndex(offsetTop) {
   return Math.max(_start - 1, 0)
 }
 
-const Target_Dis = boxHeight + 66 * 3
+const Target_Dis = boxHeight
 
 function calcStopIndex(startIndex) {
   let stop = startIndex
-  const startTop = itemSizeCache.get(startIndex)?.top || 0
+  // 从开始显示的item的下一个开始算top 这样能保证 在没有添加overscan时 保证大多数机器不会出现白屏
+  const startTop = getNextTop(startIndex)
   // 左闭右开
-  while(itemSizeCache.has(stop) && (itemSizeCache.get(stop).top - startTop < Target_Dis)) {
+  while(itemSizeCache.has(stop) && (itemSizeCache.get(stop)?.top - startTop < Target_Dis)) {
     stop++
-  }  
+  }
   return Math.min(stop, totalCount - 1)
 }
-
-let lastOffsetTop
 
 function rerenderByTopOffset(offsetTop) {
   let _startCached = calcStartIndex(offsetTop)
@@ -66,22 +89,23 @@ function rerenderByTopOffset(offsetTop) {
     container.appendChild(frag)    
   }
   
-  // todo: 100通过参数设置
   let _start$ = stopCached
-  const _stopTop =  itemSizeCache.get(_startCached)?.top ?? 0
-  let total = (itemSizeCache.get(stopCached - 1)?.top + itemSizeCache.get(stopCached - 1)?.height) || 0
-
+  const _stopTop =  getNextTop(_startCached)
+  let total = getNextTop(stopCached - 1)
+  let count = 0
+  
   do {    
     const item = renderItem(container, dataSource[_start$], total)
     const itemHeight = item.clientHeight    
     // 这里存储 top 是为了有缓存时，通过offset计算startIndex方便
-    if (!itemSizeCache.has(_start$)) {
-      container.style.height = `${eslimateTotalHeight + itemHeight - eslimateHeight}px`
+    if (!itemSizeCache.has(_start$)) {      
+      // 动态修改container的height，当所以数据加载完成时，height已调整完毕
+      container.style.height = `${eslimateTotalHeight += itemHeight - eslimateHeight}px`
       itemSizeCache.set(_start$, { height: itemHeight, top: total })          
     }    
     total += itemHeight
     _start$++
-  } while(_start$ < totalCount && total - _stopTop < Target_Dis)
+  } while(_start$ < totalCount && (total - _stopTop < Target_Dis || count++ < overscan))
 
   function renderItem(target, card, top) {
     const item = document.createElement('div')

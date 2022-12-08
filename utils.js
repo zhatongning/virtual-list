@@ -3,8 +3,11 @@ export const FixedHeight = 30
 
 const ColorAtomForHex = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
 
-function randomInt(limit) {
-  return Math.floor(Math.random() * limit)
+/**
+ * @func randomInt 获取从start开始到 start+limit结束的随机整数（左闭右开）
+*/
+export function randomInt(limit, start = 0) {
+  return Math.floor(Math.random() * limit) + start
 }
 
 const generateHexColor = function() {
