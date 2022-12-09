@@ -1,4 +1,4 @@
-import { generateData, FixedHeight as EslimateHeight, removeAllChildren } from './utils.js'
+import { generateData, removeAllChildren } from './utils.js'
 
 removeAllChildren(boxEl)
 boxEl.scrollTop = 0

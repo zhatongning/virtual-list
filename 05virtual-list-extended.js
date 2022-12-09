@@ -1,8 +1,8 @@
 import {
   generateData,
-  FixedHeight as EslimateHeight,
   removeAllChildren,
   randomInt,
+  totalCount
 } from "./utils.js";
 
 const container = document.createElement("div");
@@ -10,7 +10,6 @@ const itemSizeCache = (window.itemSizeCache = new Map());
 let lastMeasureIndex = -1;
 let overscan = 10;
 const boxHeight = boxEl.clientHeight;
-const totalCount = 500;
 const dataSource = generateData(totalCount, false);
 const eslimateHeight = randomInt(31, 30);
 console.log("当前随机的 eslimateHeight:", eslimateHeight);
@@ -62,6 +61,8 @@ function calcStartIndex(offsetTop) {
   if (itemSizeCache.size === 0) {
     return 0;
   }
+  let begin = performance.now()
+  
   let _start = 0;
   while (
     itemSizeCache.has(_start) &&
@@ -69,7 +70,7 @@ function calcStartIndex(offsetTop) {
   ) {
     _start++;
   }
-
+  console.log(performance.now() - begin)
   return Math.max(_start - 1, 0);
 }
 

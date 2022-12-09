@@ -1,5 +1,5 @@
 const HeightRange = [20, 25, 30, 35, 40]
-export const FixedHeight = 30
+export const totalCount = 10000;
 
 const ColorAtomForHex = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F']
 
@@ -18,6 +18,7 @@ const generateHexColor = function() {
   return res
 }
 
+const FixedHeight = 30
 export function generateData(totalCount, dynamicHeight) {
   const dataSource = []
   for (let i = 0; i < totalCount; i++) {
