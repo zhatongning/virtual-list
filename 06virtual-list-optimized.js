@@ -15,6 +15,8 @@ const eslimateHeight = randomInt(31, 30);
 console.log("当前随机的 eslimateHeight:", eslimateHeight);
 let eslimateTotalHeight = eslimateHeight * totalCount;
 
+const elCache = new Map()
+
 function initContainer() {
   removeAllChildren(boxEl);
     
@@ -61,14 +63,16 @@ function calcStartIndex(offsetTop) {
   if (itemSizeCache.size === 0) {
     return 0;
   }
-  const begin = performance.now()
+  // const begin = performance.now()
   let _start = calcStartIndex_binarySerach(offsetTop)
-  console.log(performance.now() - begin)
+  // console.log(performance.now() - begin)
   return Math.max(_start - 1, 0);
 }
 
-function calcStartIndex_binarySerach(offsetTop) {
-  let start = 0, end = itemSizeCache.size - 1
+function calcStartIndex_binarySerach(offsetTop, start = 0, end = itemSizeCache.size - 1) {
+  if (itemSizeCache.size > 0 && itemSizeCache.has(end) && itemSizeCache.get(end).top < offsetTop) {    
+    return exponentialSearch(end, offsetTop)
+  }
   while(start <= end) {
     let mid = start + ((end - start) >> 1)
     if (itemSizeCache.get(mid).top >= offsetTop) {
@@ -78,6 +82,33 @@ function calcStartIndex_binarySerach(offsetTop) {
     }
   }
   return end
+}
+
+function exponentialSearch(index, offsetTop) {
+  let interval = 1
+  while(index < dataSource.length && getTopByIndex_unload(index) < offsetTop) {
+    index += interval
+    index *= 2
+  }
+  return calcStartIndex_binarySerach(offsetTop, Math.min(index, dataSource.length - 1), Math.floor(index / 2))
+}
+
+function getTopByIndex_unload(index) {
+  let start = itemSizeCache.size, end = index
+  const lastMeasured = itemSizeCache.get(start - 1)
+  let startTop = lastMeasured.top + lastMeasured.height
+  for (let i = start; i <= end; i++) {
+    const item = renderItem(container, dataSource[i], startTop)
+    const itemHeight = item.clientHeight
+    if (!itemSizeCache.has(i)) {
+      container.style.height = `${(eslimateTotalHeight +=
+        itemHeight - eslimateHeight)}px`;
+      itemSizeCache.set(i, { height: itemHeight, top: startTop })
+    }
+    startTop += itemHeight
+  }
+  console.log('index', index, itemSizeCache.get(end).top)
+  return itemSizeCache.get(end).top
 }
 
 function calcStopIndex(startIndex) {
@@ -135,18 +166,26 @@ function rerenderByTopOffset(offsetTop) {
     _start$ < totalCount &&
     (total - _stopTop < boxHeight || count++ < overscan)
   );
+}
 
-  function renderItem(target, card, top) {
-    const item = document.createElement("div");
-    item.textContent = card.title;
-    item.style.position = "absolute";
-    item.style.width = "100%";
-    item.style.top = `${top}px`;
-    item.dataset.index = card.idx;
-    item.style.backgroundColor = card.backgroundColor;
-    target.appendChild(item);
-    return item;
+function renderItem(target, card, top) {
+  console.log(card.idx)
+  if (elCache.has(card.idx)) {
+    const itemEl = elCache.get(card.idx)
+    target.appendChild(itemEl)
+    return itemEl
   }
+  console.log('renderItem')
+  const item = document.createElement("div");
+  item.textContent = card.title;
+  item.style.position = "absolute";
+  item.style.width = "100%";
+  item.style.top = `${top}px`;
+  item.dataset.index = card.idx;
+  item.style.backgroundColor = card.backgroundColor;
+  target.appendChild(item)
+  elCache.set(card.idx, item)
+  return item;
 }
 
 rerenderByTopOffset(0);
@@ -163,5 +202,4 @@ export function removeAllListeners() {
   document.querySelector("#offset-top").removeEventListener("input", offsetTopChangeHandler);
   document.querySelector("#overscan").removeEventListener("input", overscanChangeHandler);
 }
-
 
