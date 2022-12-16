@@ -1,5 +1,6 @@
 window.boxEl = document.querySelector('.box')
 const CacheChioceStorageKey = '_virtual_list_from_scratch_'
+const pathShowInput = ['05virtual-list-extended', '06virtual-list-optimized']
 
 let lastEvenListener
 
@@ -36,7 +37,7 @@ document.querySelector('.selectors').addEventListener('click', (e) => {
 })()
 
 function showConfig(val) {
-  if (val === '05virtual-list-extended') {
+  if (pathShowInput.includes(val)) {
     document.querySelector('.config').style.display = 'flex'
   } else {
     document.querySelector('.config').style.display = 'none'

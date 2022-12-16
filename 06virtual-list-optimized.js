@@ -7,7 +7,7 @@ import {
 
 const container = document.createElement("div");
 const itemSizeCache = (window.itemSizeCache = new Map());
-let lastMeasureIndex = -1;
+let lastStartIndex = -1;
 let overscan = 10;
 const boxHeight = boxEl.clientHeight;
 const dataSource = generateData(totalCount, false);
@@ -15,13 +15,11 @@ const eslimateHeight = randomInt(31, 30);
 console.log("当前随机的 eslimateHeight:", eslimateHeight);
 let eslimateTotalHeight = eslimateHeight * totalCount;
 
-const elCache = new Map()
-
 function initContainer() {
   removeAllChildren(boxEl);
     
   container.className = "container";
-  container.style.width = "500px";
+  container.style.width = "100%";
   container.style.position = "relative";
   container.style.height = `${eslimateTotalHeight}px`;
   boxEl.appendChild(container);
@@ -46,136 +44,113 @@ function initConfig() {
 initContainer()
 initConfig()
 
+// 记录itemSizeCache缓存的最近的子项信息 
+let lastMeasureIndex = -1
 
-/**
- * @func getNextTop 获取index的下一个item的top值
- * @param index {number} 索引值
- */
-function getNextTop(index) {
-  if (!itemSizeCache.has(index)) {
-    return 0;
-  }
-  let cache = itemSizeCache.get(index);
-  return cache.top + cache.height;
-}
-
-function calcStartIndex(offsetTop) {
+function calcStartIndex(offsetTop, start = 0, end = lastMeasureIndex) {
   if (itemSizeCache.size === 0) {
-    return 0;
+    return Math.floor(offsetTop / eslimateHeight)
   }
-  // const begin = performance.now()
-  let _start = calcStartIndex_binarySerach(offsetTop)
-  // console.log(performance.now() - begin)
-  return Math.max(_start - 1, 0);
-}
 
-function calcStartIndex_binarySerach(offsetTop, start = 0, end = itemSizeCache.size - 1) {
-  if (itemSizeCache.size > 0 && itemSizeCache.has(end) && itemSizeCache.get(end).top < offsetTop) {    
+  if (itemSizeCache.size > 0 && itemSizeCache.has(end) && itemSizeCache.get(end).top <= offsetTop) {    
     return exponentialSearch(end, offsetTop)
   }
+  return calcStartIndex_binarySerach(offsetTop, start, end)
+}
+
+function getOffsetByIndex(index) {
+  if (itemSizeCache.size === 0) {
+    return 0
+  }
+  if (index < lastMeasureIndex) {
+    return itemSizeCache.get(index).top
+  }
+  let start = lastMeasureIndex + 1, end = index
+  let lastMeasureItem = itemSizeCache.get(lastMeasureIndex)
+  let currentOffset = lastMeasureItem.top + lastMeasureItem.height
+  while (
+    start <= end
+  ) {
+    const item = renderItem(container, dataSource[start], currentOffset);
+    const itemHeight = item.clientHeight;
+    // 这里存储 top 是为了有缓存时，通过offset计算startIndex方便
+      // 动态修改container的height，当所以数据加载完成时，height已调整完毕
+    if (!itemSizeCache.has(start)) {
+      container.style.height = `${(eslimateTotalHeight +=
+        itemHeight - eslimateHeight)}px`;      
+      itemSizeCache.set(start, { height: itemHeight, top: currentOffset });
+      lastMeasureIndex = start
+    }
+    item.remove()
+    currentOffset += itemHeight;
+    start++;
+  }
+  return itemSizeCache.get(lastMeasureIndex).top
+}
+
+function calcStartIndex_binarySerach(offsetTop, start, end) {
   while(start <= end) {
+
     let mid = start + ((end - start) >> 1)
-    if (itemSizeCache.get(mid).top >= offsetTop) {
+    if (getOffsetByIndex(mid) >= offsetTop) {
       end = mid - 1
     } else {
       start = mid + 1
     }
   }
-  return end
+  return Math.max(end - 2, 0);
 }
 
 function exponentialSearch(index, offsetTop) {
   let interval = 1
-  while(index < dataSource.length && getTopByIndex_unload(index) < offsetTop) {
+  while(index < totalCount && getOffsetByIndex(index) < offsetTop) {
+
     index += interval
     index *= 2
   }
-  return calcStartIndex_binarySerach(offsetTop, Math.min(index, dataSource.length - 1), Math.floor(index / 2))
+  return calcStartIndex_binarySerach(offsetTop, Math.floor(index / 2), Math.min(index, totalCount - 1))
 }
 
-function getTopByIndex_unload(index) {
-  let start = itemSizeCache.size, end = index
-  const lastMeasured = itemSizeCache.get(start - 1)
-  let startTop = lastMeasured.top + lastMeasured.height
-  for (let i = start; i <= end; i++) {
-    const item = renderItem(container, dataSource[i], startTop)
-    const itemHeight = item.clientHeight
-    if (!itemSizeCache.has(i)) {
-      container.style.height = `${(eslimateTotalHeight +=
-        itemHeight - eslimateHeight)}px`;
-      itemSizeCache.set(i, { height: itemHeight, top: startTop })
-    }
-    startTop += itemHeight
-  }
-  console.log('index', index, itemSizeCache.get(end).top)
-  return itemSizeCache.get(end).top
-}
-
-function calcStopIndex(startIndex) {
-  let stop = startIndex;
-  // 从开始显示的item的下一个开始算top 这样能保证 在没有添加overscan时 保证大多数机器不会出现白屏
-  const startTop = getNextTop(startIndex);
-  // 左闭右开
-  while (
-    itemSizeCache.has(stop) &&
-    itemSizeCache.get(stop)?.top - startTop < boxHeight
-  ) {
-    stop++;
-  }
-  return Math.min(stop, totalCount - 1);
-}
-
-function rerenderByTopOffset(offsetTop) {
-  let _startCached = calcStartIndex(offsetTop);
-  if (lastMeasureIndex === _startCached) {
+function rerenderByTopOffset(scrollTop) {   
+  let _startCached = calcStartIndex(scrollTop);
+  if (lastStartIndex === _startCached) {     
     return;
   }
-  lastMeasureIndex = _startCached;
-  if (offsetTop + boxHeight === container.clientHeight) {
-    return;
+
+  if (scrollTop + boxHeight >= container.height) {
+    return
   }
+
+  lastStartIndex = _startCached;
+  
   // 通过缓存的数据
   removeAllChildren(container);
-  let stopCached = calcStopIndex(_startCached);
-  if (stopCached - _startCached > 0) {
-    const frag = document.createDocumentFragment();
-    for (let i = _startCached; i < stopCached; i++) {
-      renderItem(frag, dataSource[i], itemSizeCache.get(i).top);
-    }
-    container.appendChild(frag);
-  }
 
-  let _start$ = stopCached;
-  const _stopTop = getNextTop(_startCached);
-  let total = getNextTop(stopCached - 1);
+  let _start$ = _startCached;
+  const _stopTop = getOffsetByIndex(Math.max(0, _start$));
+  let currentOffset = _stopTop
   let count = 0;
-
   do {
-    const item = renderItem(container, dataSource[_start$], total);
+    const item = renderItem(container, dataSource[_start$], currentOffset);
     const itemHeight = item.clientHeight;
     // 这里存储 top 是为了有缓存时，通过offset计算startIndex方便
-    if (!itemSizeCache.has(_start$)) {
       // 动态修改container的height，当所以数据加载完成时，height已调整完毕
+    if (!itemSizeCache.has(_start$)) {
       container.style.height = `${(eslimateTotalHeight +=
-        itemHeight - eslimateHeight)}px`;
-      itemSizeCache.set(_start$, { height: itemHeight, top: total });
+        itemHeight - eslimateHeight)}px`;      
+      itemSizeCache.set(_start$, { height: itemHeight, top: currentOffset });
+      lastMeasureIndex = _start$
     }
-    total += itemHeight;
+    currentOffset += itemHeight;
     _start$++;
   } while (
     _start$ < totalCount &&
-    (total - _stopTop < boxHeight || count++ < overscan)
+    (currentOffset - _stopTop < boxHeight || count++ < overscan)
   );
+
 }
 
 function renderItem(target, card, top) {
-  console.log(card.idx)
-  if (elCache.has(card.idx)) {
-    const itemEl = elCache.get(card.idx)
-    target.appendChild(itemEl)
-    return itemEl
-  }
-  console.log('renderItem')
   const item = document.createElement("div");
   item.textContent = card.title;
   item.style.position = "absolute";
@@ -184,7 +159,6 @@ function renderItem(target, card, top) {
   item.dataset.index = card.idx;
   item.style.backgroundColor = card.backgroundColor;
   target.appendChild(item)
-  elCache.set(card.idx, item)
   return item;
 }
 
