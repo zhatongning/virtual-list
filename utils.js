@@ -18,7 +18,7 @@ const generateHexColor = function() {
   return res
 }
 
-const FixedHeight = 30
+export const FixedHeight = 30
 export function generateData(totalCount, dynamicHeight) {
   const dataSource = []
   for (let i = 0; i < totalCount; i++) {

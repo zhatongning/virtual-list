@@ -1,13 +1,16 @@
-import { generateData, removeAllChildren } from "./utils.js"
+import { generateData, totalCount, FixedHeight, removeAllChildren } from "./utils.js"
 
 removeAllChildren(boxEl)
+document.title = 'absolute-auto-scroll'
 
-const dataSource = generateData(10000)
+const dataSource = generateData(totalCount)
 
 let container
 
 function initRender() {
   container = document.createElement('div')
+  container.style.position = 'relative'
+  container.style.height = `${ totalCount * FixedHeight }px`
   renderChildren(container)
   boxEl.appendChild(container)
 }
@@ -17,7 +20,10 @@ function renderChildren(parent) {
   const frag = document.createDocumentFragment()
   for(let i = 0; i < dataSource.length; i++) {
     const child = document.createElement('div')
-    child.textContent = dataSource[i].title
+    child.style.position = 'absolute'
+    child.style.height = `${dataSource[i].height}px`
+    child.style.top = `${i * FixedHeight}px`    
+    child.innerText = dataSource[i].title
     child.dataset.index = dataSource[i].idx
     frag.appendChild(child)
   }
@@ -27,14 +33,7 @@ function renderChildren(parent) {
 initRender()
 
 
-// boxEl.addEventListener('scroll', function(e) {
-
-//   // _topOffset =
-//   rerenderByTopOffset(this.scrollTop)
-// })
-
 function scrollHanlder() {
-  console.log('scroll in 01')
   renderChildren(container)
 }
 

@@ -1,15 +1,17 @@
-# 虚拟滚动
+# 最容易懂的虚拟列表实现
 
 ## 从自然滚动开始
 
-如果容器的宽度或者高度固定，当内容的宽度或者高度大于容器的宽度或者高度，给容器再添加 `overflow: auto` 或者 `overflow: scroll`时， 就会在对应方向上出现滚动条。
+如果容器的宽度或者高度固定，当内容的在某个方向上的度量大于容器时，同时给容器添加 `overflow: auto` 或者 `overflow: scroll`时， 就会在该方向上出现滚动条。
 
-![scroll](imgs/scroll.drawio.svg)
+![图1](assets/scroll.drawio.svg)
 
-如上图，蓝色背景的容器，其内容的高度比容器本身要高，所以内部就出现了滚动条。滚动时，我们所能看到的内容就是容器在内容上的正交投影内的区域。
+如上图，蓝色背景的容器，其内容的高度比容器本身要高，所以内部就出现了滚动条。滚动时，我们所能看到的内容就是容器在内容上的正交投影内的区域，也是内容的**可视区域**。
 
 
 ## 自然滚动：内容撑开
+
+自然滚动在代码实现上也是很基础的
 
 - 首先需要一个容器
 
@@ -18,9 +20,9 @@
 ```
 
 ```css
-.box {
-  /* 固定高度 */
+.box {  
   width: 500px;
+  /* 固定高度：可视区域的高度 */
   height: 600px;
   border: 1px solid #d1d1d1;
    /* 滚动条 */
@@ -63,13 +65,11 @@ container.appendChild(frag)
 
 这样就有了自然滚动。
 
-具体代码可以查看[github上的源码auto-scroll](https://github.com/zhatongning/virtual-list/blob/master/01auto-scroll.js)
+具体代码可以查看[github上的源码auto-scroll](https://github.com/zhatongning/virtual-list/blob/master/01-a-auto-scroll.js)
 
-
-这里要说明的是： 上面的`container`是没有设置高度的，其高度是由内容撑开。
+此时的`container`是没有设置高度的，其高度是由内容撑开。
 
 ## 自然滚动：内容绝对定位
-
 
 首先给 `container` 添加相对定位
 
@@ -96,19 +96,23 @@ container.style.posotion = 'relative'
 }
 ```
 
-给`container`内的每个条目设置绝对定位，同时设置`top`。`container`内的所有子元素都脱硫了文档流，所以此时`container`的高度为`0`，为了让内容正常展示，给`container`添加高度`（10000 * 30）。
+给`container`内的每个条目设置绝对定位，同时设置`top`。`container`内的所有子元素都脱硫了文档流，所以此时`container`的高度为`0`，为了让内容正常展示，给`container`添加高度`（10000 * 30）。具体代码可以查看[自然滚动-绝对定位](https://github.com/zhatongning/virtual-list/blob/master/01-b-auto-scroll-absolute.js)。
 
-此时的展示效果跟由内容撑开时自然滚动完全一致。
+![auto-scroll-static](./assets/auto-scroll-static.png)
 
-## 虚拟滚动：减少渲染元素
+![auto-scroll-static](./assets/auto-scroll-absolute.png)
+
+此时的展示效果跟由内容撑开时自然滚动完全一致。如上图，从`chrome`的任务管理器也能看出，*连续滚动时*的`cpu`和`gpu`消耗也比较接近。但是如果仔细点会发现，这里的`cpu`消耗有点高。[`cpu`数值的具体含义可查看这里](https://developer.chrome.com/docs/extensions/reference/processes/#type-Process)。
+
+## 虚拟列表：减少渲染元素
 
 上述的两种自然滚动时，都需要将内容全部渲染出来，大量的元素渲染导致资源浪费。尤其是在如今`spa`大行其道的年代，频繁的数据变动往往会导致页面重新渲染刷新，而长列表的存在会占用大量资源，从而降低渲染效率，出现页面卡顿等降低用户体验的情况。
 
-这个问题的主要原因在于要渲染的元素太多，那是不是可以减少要渲染的元素呢？当然可以，在第二种以绝对定位的方式展示的自然滚动里，`container`内的元素都是以绝对定位的方式排列的，元素并不依赖于其上方元素（对比第一种靠内容撑开的方式）。我们能看到的`container`内的元素只是`box`视口内的元素，如果将视口外的其他元素都隐藏掉，这样每次需要渲染的元素就极少了。
+如何可以减少要渲染的元素的数量呢？在以绝对定位的方式实现的自然滚动里，`container`内的元素都是以绝对定位的方式排列的，元素并不依赖于其上方元素（对比第一种靠内容撑开的方式）。所能看到的`container`内的元素只是`box`视口内的元素，如果将视口外的其他元素都不渲染，那需要渲染的元素自然就是极少了。当滚动触发时，实时计算可见范围内需要展示的元素，然后将可视区域外的元素移除，同时渲染最新的视口内元素。 而这就是虚拟列表的基本思路。
 
-## 虚拟滚动的基本实现
+## 虚拟列表的实现
 
-上面说到，每次更新只渲染`box`视口内的元素，而虚拟滚动实现的核心就是根据当前的滚动条的位置（`box.scrollTop`）动态计算起止位置。
+上面说到，每次更新只渲染可视范围内的元素（这里的`box`元素），而虚拟列表实现的核心就是根据当前的滚动条的位置（`box.scrollTop`）动态计算起止位置。
 
 ### 固定高度
 
@@ -129,17 +133,24 @@ container.style.posotion = 'relative'
 
 根据可见数量以及起始索引可得到可见区域的索引范围为: `[startIndex, startIndex + visibleCount)`
 
-完整`demo`代码可见[virtual-list](https://github.com/zhatongning/virtual-list/blob/master/02virtual-list.js)
+完整`demo`代码可见[virtual-list](https://github.com/zhatongning/virtual-list/blob/master/02virtual-list-fixed-height.js)
+
+此时再看下连续滚动时任务管理器的实时数据：
+
+![virtual-list-fixed-height](./assets/virtual-list-fixed-height.png)
+
+相比之前的自然滚动，此时可以看出`cpu`和`gpu`消耗明显下降，避免了资源浪费。
 
 
-### 动态高度
+### 变化高度
 
-在固定高度中，`container`内部的元素都是`30`的固定高度，这样的高度计算是简单的。下面将这个高度改成动态的（height值是变化的）。
+在固定高度中，`container`内部的元素都是`30`的固定高度，这样的高度计算是简单的。下面将这个高度改成变化的。（这里的变化是指不同元素之间的高度是不同的，特定元素的高度是不变的）。
 
 <img src="assets/dynamic-height.png" alt="idynamic-height.png" style="zoom:40%;" />
 
+<br /> 
 
-上图展示了，针对动态高度时，如何计算每个元素的位置的方法：`用上一个元素的top(索引0为0，其他索引已计算) + 上一个元素的高度(数据中提供) = 下一个元素的top`，这样就能依次算出所有元素的位置了。
+上图展示了，针对动态高度时，如何计算每个元素的位置的方法：`用上一个元素的top(索引0为0) + 上一个元素的高度(数据中提供) = 下一个元素的top`，这样就能依次算出所有元素的位置了。
 
 而此时计算 `startIndex` 的方法也需要变化一下。同时这里需要捋一下整体的渲染思路：
 
