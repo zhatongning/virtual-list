@@ -5,15 +5,21 @@ boxEl.scrollTop = 0
 
 
 const boxHeight = boxEl.clientHeight
-const totalCount = 500
+const totalCount = 10000
 const dataSource = generateData(totalCount, true)
-// const ItemCountShown = Math.floor(500 / EslimateHeight + 20)
 
-const container = document.createElement('div')
-container.className = 'container'
-container.style.width = '500px'
-let totalHeigh
-container.style.position = 'relative'
+function initContainer() {
+  const container = document.createElement('div')
+  container.className = 'container'
+  container.style.width = '500px'
+  const totalHeight = totalCount * EslimateHeight
+  container.style.height = `${totalHeight}px`
+  container.style.position = 'relative'
+  boxEl.appendChild(container)
+  return container
+}
+
+const container = initContainer()
 
 function calcTopByIndex(index) {
   let total = 0
@@ -35,23 +41,10 @@ function getLastIndex(start) {
   return last
 }
 
-const _last$ = getLastIndex(0)
-container.style.height = `${ eslimateTotalHeight(0) }px`
-
-
-for(let i = 0; i <= _last$; i++) {
-  const div = document.createElement('div')
-  div.textContent = dataSource[i].title
-  div.style.width = '100%'
-  div.style.position = 'absolute'
-  div.style.top = `${ calcTopByIndex(i) }px`
-  div.style.height = `${ dataSource[i].height }px`
-  div.style.backgroundColor = dataSource[i].backgroundColor
-  div.dataset.index = dataSource[i].idx
-  container.appendChild(div)
-}
-
 function calcStartIndex(offsetTop) {
+  if (offsetTop === 0) {
+    return 0
+  }
   let sumHeight = 0, start
   for (let i = 0; i < dataSource.length; i ++) {
     sumHeight += dataSource[i].height
@@ -64,7 +57,6 @@ function calcStartIndex(offsetTop) {
   return start
 }
 
-boxEl.appendChild(container)
 
 function eslimateTotalHeight(index) {
   let total = 0
@@ -75,24 +67,24 @@ function eslimateTotalHeight(index) {
   return total
 }
 
-let lastOffsetTop
-
 function rerenderByTopOffset(offsetTop) {
   if (offsetTop + boxHeight === container.clientHeight) {
     return
   }
   const _start = calcStartIndex(offsetTop)
-  const _last$$ = getLastIndex(_start)
-  console.log('rerender', _start, _last$$, offsetTop)
+  const _last$ = getLastIndex(_start)
+
+  removeAllChildren(container)
 
   container.style.height = `${ eslimateTotalHeight(_start) }px`
   const fragment = document.createDocumentFragment()
-  for (let i = _start; i <= _last$$; i++) {
+  for (let i = _start; i <= _last$; i++) {
     const item = document.createElement('div')
     item.textContent = dataSource[i].title
     item.style.position = 'absolute'
     item.style.width = '100%'
     item.style.height = `${dataSource[i].height}px`
+    item.style.lineHeight = `${dataSource[i].height}px`
     item.style.top = `${ calcTopByIndex(i) }px`
     item.dataset.index = dataSource[i].idx
     item.style.backgroundColor = dataSource[i].backgroundColor
@@ -102,13 +94,13 @@ function rerenderByTopOffset(offsetTop) {
 
 }
 
-function scrollHanlder(e) {
-  console.log(e.target)
+rerenderByTopOffset(0)
+
+function scrollHanlder(e) {  
   rerenderByTopOffset(this.scrollTop)
 }
 
 boxEl.addEventListener('scroll', scrollHanlder)
-
 
 export function removeAllListeners() {
   boxEl.removeEventListener('scroll', scrollHanlder)
