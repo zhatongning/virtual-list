@@ -8,7 +8,7 @@ document.title = 'virtual-list-fixed-height'
 
 const totalCount = 10000
 const dataSource = generateData(totalCount)
-const ItemCountShown = Math.floor(boxEl.offsetHeight / FixedHeight) + 1
+const ItemCountShown = Math.ceil(boxEl.offsetHeight / FixedHeight)
 
 
 function initContainer() {

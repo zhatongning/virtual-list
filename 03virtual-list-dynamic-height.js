@@ -2,6 +2,7 @@ import { generateData, FixedHeight as EslimateHeight, removeAllChildren } from '
 
 removeAllChildren(boxEl)
 boxEl.scrollTop = 0
+document.title = 'virtual-list-dynamic-height'
 
 
 const boxHeight = boxEl.clientHeight
@@ -76,7 +77,7 @@ function rerenderByTopOffset(offsetTop) {
 
   removeAllChildren(container)
 
-  container.style.height = `${ eslimateTotalHeight(_start) }px`
+  container.style.height = `${ eslimateTotalHeight(_last$) }px`
   const fragment = document.createDocumentFragment()
   for (let i = _start; i <= _last$; i++) {
     const item = document.createElement('div')

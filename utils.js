@@ -31,7 +31,7 @@ export function generateData(totalCount, dynamicHeight) {
     
     if (dynamicHeight === false) {
       delete $p.height
-      $p.title = `title ${i}`.repeat(randomInt(20) + 1)
+      $p.title = `title ${i} \r\n`.repeat(randomInt(3, 1))
     }
     dataSource.push($p)
   }

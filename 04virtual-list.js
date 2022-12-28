@@ -152,7 +152,7 @@ function rerenderByTopOffset(scrollTop) {
 
 function renderItem(target, card, top) {
   const item = document.createElement("div");
-  item.textContent = card.title;
+  item.innerText = card.title;
   item.style.position = "absolute";
   item.style.width = "100%";
   item.style.top = `${top}px`;
